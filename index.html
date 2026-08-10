@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt 智能寶庫</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- PapaParse for parsing CSV from Google Sheets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        body {
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            background-color: #f1f3f6;
+            color: #333333;
+        }
+
+        /* Custom scrollbar for prompt boxes */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #9ca3af;
+        }
+
+        /* Card purple top border highlight */
+        .prompt-card {
+            border-top: 5px solid #9333ea;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .prompt-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+        }
+
+        /* Toast animation */
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: translateY(20px); }
+            15% { opacity: 1; transform: translateY(0); }
+            85% { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-20px); }
+        }
+        .toast-animate {
+            animation: fadeInOut 2.5s forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-16">
+
+    <!-- Header Section -->
+    <header class="pt-10 pb-6 px-4 text-center">
+        <h1 class="text-3xl sm:text-4xl font-bold flex items-center justify-center gap-2 text-gray-900 tracking-tight">
+            <span>🚀</span> AI Prompt 智能寶庫
+        </h1>
+        
+        <div class="mt-3 flex items-center justify-center gap-2">
+            <a href="https://docs.google.com/spreadsheets/d/1SwOSS42NqbFRmX8oXiv2SRhByj_0YCPjQY5HhKbeNAE/edit?usp=sharing" 
+               target="_blank" 
+               rel="noopener noreferrer"
+               class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium transition shadow-sm">
+                <span>📁</span>
+                <span>開啟原始資料 Google Sheet</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs text-gray-400 ml-0.5"></i>
+            </a>
+            <button id="refreshBtn" onclick="loadGoogleSheetData()" title="重新同步資料" 
+                    class="p-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-600 text-sm transition shadow-sm">
+                <i class="fa-solid fa-rotate" id="refreshIcon"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Search & Filter Controls -->
+    <section class="max-w-6xl mx-auto px-4 sm:px-6">
+        <!-- Search Input -->
+        <div class="max-w-xl mx-auto mb-6 relative">
+            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </div>
+            <input type="text" 
+                   id="searchInput" 
+                   placeholder="搜尋提示詞..." 
+                   oninput="handleSearch()"
+                   class="w-full pl-11 pr-10 py-3 rounded-full border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-base transition">
+            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
+                <i class="fa-solid fa-circle-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Category Tags Bar -->
+        <div id="categoryContainer" class="flex flex-wrap items-center justify-center gap-2.5 max-w-4xl mx-auto mb-8">
+            <!-- Category pills generated via JavaScript -->
+        </div>
+    </section>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6">
+        <!-- Section Title & Meta -->
+        <div class="flex items-center justify-between mb-6 border-b border-gray-200/60 pb-3">
+            <h2 id="sectionTitle" class="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
+                <span>🧠</span> <span id="categoryTitleText">AI 協思</span>
+            </h2>
+            <span id="promptCountBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-200 text-gray-700">
+                載入中...
+            </span>
+        </div>
+
+        <!-- Loading State -->
+        <div id="loadingSpinner" class="py-20 text-center">
+            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
+            <p class="mt-3 text-gray-500 text-sm font-medium">從 Google Sheet 載入資料中...</p>
+        </div>
+
+        <!-- Empty Results -->
+        <div id="emptyState" class="hidden py-16 text-center bg-white rounded-2xl shadow-sm border border-gray-100 my-4">
+            <i class="fa-regular fa-folder-open text-5xl text-gray-300 mb-3"></i>
+            <p class="text-gray-600 font-medium">找不到符合條件的 Prompt</p>
+            <p class="text-gray-400 text-sm mt-1">請嘗試變更搜尋關鍵字或選擇其他分類</p>
+        </div>
+
+        <!-- Cards Grid Layout -->
+        <div id="promptGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Dynamic Prompt Cards Inserted Here -->
+        </div>
+    </main>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-6 right-6 hidden z-50 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+        <span id="toastMessage" class="text-sm font-medium">Prompt 已成功複製到剪貼簿！</span>
+    </div>
+
+    <script>
+        // Google Sheet CSV Export Endpoint
+        const SHEET_CSV_URL = 'https://docs.google.com/spreadsheets/d/1SwOSS42NqbFRmX8oXiv2SRhByj_0YCPjQY5HhKbeNAE/export?format=csv';
+
+        // High-fidelity fallback sample data matching exact design in screenshot
+        const fallbackData = [
+            {
+                category: "內容創作",
+                title: "意義單詞",
+                content: "將文章的重點部分，尋找一個代表性英文字母，並使這些字母的首字組合成一個具有意義的單詞（如「VISION」）"
+            },
+            {
+                category: "內容創作",
+                title: "品牌名稱",
+                content: "完成 ChatGPT 角色定義後，依據\"品牌定義\"與\"產品介紹\"發想5個產品名稱與標題（口號）。\n\n- 提示詞指令：描述品牌與產品，請列出 數字 個產品名稱與行銷標題建議。（\"品牌定義\"描述、\"產品介紹\"描述）\n\n- Prompt\n- 我推出一個運動鞋品牌，今年會銷售一款新型跑步鞋..."
+            },
+            {
+                category: "筆記精煉",
+                title: "長篇文章",
+                content: "為這篇長篇文章，進行以下四個步驟，每一個步驟都要提供給文章與標示出來\n\n第1、請為這篇文章生成一份簡短摘要。\n第2、請基於上一個摘要，不要遺漏任何專有名詞、數字或關鍵人物，重新生成一份摘要。\n第3、現在，請將摘要中每一句話都濃縮成更簡潔的表達，同時保留原意。"
+            },
+            {
+                category: "筆記精煉",
+                title: "書籍精煉",
+                content: "請對 @[檔名]\n啟動【終極煉金管線】，一次執行四步驟整合：\n第一步：全域架構導航 (Stage 01)\n執行 stage-1-navigator，對精煉稿進行深度掃描，產出知識地圖與反直覺預警。\n存檔：01_Map_[主題簡稱].md。\n第二步：價值 DNA 診斷 (Stage 02)..."
+            },
+            {
+                category: "筆記精煉",
+                title: "書籍精煉",
+                content: "請對 @[檔名]\n啟動【終極煉金管線】，一次執行四步驟整合：\n第一步：全域架構導航 (Stage 01)\n執行 stage-1-navigator，對精煉稿進行深度掃描，產出知識地圖與反直覺預警。\n存檔：01_Map_[主題簡稱].md。\n第二步：價值 DNA 診斷 (Stage 02)..."
+            },
+            {
+                category: "筆記精煉",
+                title: "提取練習",
+                content: "我剛讀完了關於 [填入具體段落標題] 的內容。現在請幫我進行深度研磨：\n\n1-底層邏輯拷問：針對這段內容的「運作原理」向我提問，測試我是否理解了「為什麼有效」，而非只是記住步驟。\n\n2-隱喻轉化：如果這段概念有複雜的抽象機制..."
+            },
+            {
+                category: "內容創作",
+                title: "影片清理",
+                content: "你的角色是一位「逐字稿校對員」，不是編輯。\n任務：\n1-僅刪除口語填充詞、重複說法、明顯冗詞\n2-不得改寫句型、不得改變原意、不得加入新解釋\n規則：\n1-原句順序必須完全一致\n2-若刪除任何詞語，需確保前後前頭連貫"
+            },
+            {
+                category: "內容創作",
+                title: "影片清理",
+                content: "你的角色是一位「內容結構化整理員」，不是編輯、不是評論者。\n\n我會提供一段約 4000 字的影片逐字稿內容，請你在完全保留原作者語意與立場的前提下，進行「保留語意的濃縮」，將內容壓縮至 約 2000 字。全文用繁體中文呈現。"
+            }
+        ];
+
+        // Default Filter Categories (Matches screenshot)
+        const defaultCategories = [
+            "全部", "內容創作", "筆記精煉", "程式應用", 
+            "簡報表達", "程式生成", "文本優化", "生文校正", 
+            "專案企劃", "圖片生成", "筆記整理", "資訊整理", "心智圖法"
+        ];
+
+        // Application State
+        let allPrompts = [];
+        let categoriesList = [...defaultCategories];
+        let currentCategory = "全部";
+        let searchQuery = "";
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadGoogleSheetData();
+        });
+
+        // Load CSV Data from Google Sheet
+        function loadGoogleSheetData() {
+            const refreshIcon = document.getElementById('refreshIcon');
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            
+            if (refreshIcon) refreshIcon.classList.add('fa-spin');
+            if (loadingSpinner) loadingSpinner.classList.remove('hidden');
+
+            Papa.parse(SHEET_CSV_URL, {
+                download: true,
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                    if (loadingSpinner) loadingSpinner.classList.add('hidden');
+
+                    if (results.data && results.data.length > 0) {
+                        parseSheetData(results.data);
+                    } else {
+                        useFallbackData();
+                    }
+                },
+                error: function(err) {
+                    console.warn("Google Sheet 讀取失敗或受權限限制，載入預設展示資料:", err);
+                    if (refreshIcon) refreshIcon.classList.remove('fa-spin');
+                    if (loadingSpinner) loadingSpinner.classList.add('hidden');
+                    useFallbackData();
+                }
+            });
+        }
+
+        function parseSheetData(rows) {
+            let parsed = [];
+            let dynamicCategories = new Set(defaultCategories);
+
+            rows.forEach(row => {
+                // Support multiple column header names in Taiwanese/Chinese or English
+                const cat = row['分類'] || row['標籤'] || row['Category'] || row['Tag'] || '通用';
+                const title = row['名稱'] || row['標題'] || row['Title'] || row['Name'] || '無標題';
+                const content = row['提示詞'] || row['Prompt'] || row['內容'] || row['Content'] || '';
+
+                if (content.trim() || title.trim()) {
+                    parsed.push({
+                        category: cat.trim(),
+                        title: title.trim(),
+                        content: content.trim()
+                    });
+                    if (cat.trim() && cat.trim() !== '全部') {
+                        dynamicCategories.add(cat.trim());
+                    }
+                }
+            });
+
+            if (parsed.length > 0) {
+                allPrompts = parsed;
+                categoriesList = Array.from(dynamicCategories);
+            } else {
+                useFallbackData();
+                return;
+            }
+
+            renderCategoryPills();
+            renderPrompts();
+        }
+
+        function useFallbackData() {
+            allPrompts = fallbackData;
+            categoriesList = [...defaultCategories];
+            renderCategoryPills();
+            renderPrompts();
+        }
+
+        function renderCategoryPills() {
+            const container = document.getElementById('categoryContainer');
+            container.innerHTML = '';
+
+            categoriesList.forEach(cat => {
+                const isActive = cat === currentCategory;
+                const button = document.createElement('button');
+                
+                button.className = isActive 
+                    ? 'px-4 py-1.5 rounded-full text-sm font-medium transition shadow-sm bg-blue-600 text-white cursor-pointer'
+                    : 'px-4 py-1.5 rounded-full text-sm font-medium transition shadow-sm bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 cursor-pointer';
+                
+                button.innerText = cat;
+                button.onclick = () => selectCategory(cat);
+                container.appendChild(button);
+            });
+        }
+
+        function selectCategory(cat) {
+            currentCategory = cat;
+            document.getElementById('categoryTitleText').innerText = cat === '全部' ? 'AI 協思' : cat;
+            renderCategoryPills();
+            renderPrompts();
+        }
+
+        function handleSearch() {
+            const input = document.getElementById('searchInput');
+            searchQuery = input.value.trim().toLowerCase();
+            
+            const clearBtn = document.getElementById('clearSearchBtn');
+            if (searchQuery.length > 0) {
+                clearBtn.classList.remove('hidden');
+            } else {
+                clearBtn.classList.add('hidden');
+            }
+
+            renderPrompts();
+        }
+
+        function clearSearch() {
+            const input = document.getElementById('searchInput');
+            input.value = '';
+            searchQuery = '';
+            document.getElementById('clearSearchBtn').classList.add('hidden');
+            renderPrompts();
+        }
+
+        function renderPrompts() {
+            const grid = document.getElementById('promptGrid');
+            const emptyState = document.getElementById('emptyState');
+            const countBadge = document.getElementById('promptCountBadge');
+            
+            grid.innerHTML = '';
+
+            // Filter logic
+            const filtered = allPrompts.filter(item => {
+                const matchesCategory = currentCategory === '全部' || item.category === currentCategory;
+                const matchesSearch = !searchQuery || 
+                    item.title.toLowerCase().includes(searchQuery) || 
+                    item.content.toLowerCase().includes(searchQuery) ||
+                    item.category.toLowerCase().includes(searchQuery);
+
+                return matchesCategory && matchesSearch;
+            });
+
+            countBadge.innerText = `共 ${filtered.length} 個提示詞`;
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+                return;
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            // Generate Prompt Cards
+            filtered.forEach((item, index) => {
+                const card = document.createElement('div');
+                card.className = 'prompt-card bg-white rounded-2xl p-5 flex flex-col justify-between shadow-sm border border-gray-100/80';
+
+                card.innerHTML = `
+                    <div>
+                        <!-- Category Tag -->
+                        <div class="mb-2">
+                            <span class="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-600 border border-sky-100">
+                                ${escapeHtml(item.category || '通用')}
+                            </span>
+                        </div>
+                        
+                        <!-- Title -->
+                        <h3 class="text-lg font-bold text-gray-900 mb-3 tracking-tight">
+                            ${escapeHtml(item.title)}
+                        </h3>
+
+                        <!-- Scrollable Text Box -->
+                        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3.5 mb-4 h-48 overflow-y-auto custom-scrollbar">
+                            <pre class="whitespace-pre-wrap font-sans text-sm text-gray-600 leading-relaxed break-words">${escapeHtml(item.content)}</pre>
+                        </div>
+                    </div>
+
+                    <!-- Copy Action Button -->
+                    <button onclick="copyPrompt(this, \`${escapeJsString(item.content)}\`)" 
+                            class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-95 cursor-pointer">
+                        <i class="fa-regular fa-copy"></i>
+                        <span>複製 Prompt</span>
+                    </button>
+                `;
+
+                grid.appendChild(card);
+            });
+        }
+
+        function copyPrompt(buttonEl, text) {
+            // Clipboard Fallback using execCommand for iframe safety
+            const textarea = document.createElement('textarea');
+            textarea.value = text;
+            textarea.style.position = 'fixed';
+            textarea.style.opacity = '0';
+            document.body.appendChild(textarea);
+            textarea.select();
+            
+            let successful = false;
+            try {
+                successful = document.execCommand('copy');
+            } catch (err) {
+                console.error('Copy failed', err);
+            }
+            document.body.removeChild(textarea);
+
+            if (successful || navigator.clipboard) {
+                if (navigator.clipboard) {
+                    navigator.clipboard.writeText(text).catch(() => {});
+                }
+
+                // Button UI Feedback
+                const originalText = buttonEl.innerHTML;
+                buttonEl.innerHTML = `<i class="fa-solid fa-check"></i> <span>已複製！</span>`;
+                buttonEl.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+                buttonEl.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+
+                setTimeout(() => {
+                    buttonEl.innerHTML = originalText;
+                    buttonEl.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+                    buttonEl.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                }, 1800);
+
+                // Show Floating Toast
+                showToast('Prompt 已成功複製到剪貼簿！');
+            }
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toastMessage');
+            
+            toastMessage.innerText = msg;
+            toast.classList.remove('hidden');
+            toast.classList.add('toast-animate');
+
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('toast-animate');
+            }, 2500);
+        }
+
+        // Helper string escaping functions
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        function escapeJsString(str) {
+            if (!str) return '';
+            return str
+                .replace(/\\/g, '\\\\')
+                .replace(/`/g, '\\`')
+                .replace(/\${/g, '\\${')
+                .replace(/"/g, '\\"')
+                .replace(/'/g, "\\'");
+        }
+    </script>
+</body>
+</html>
