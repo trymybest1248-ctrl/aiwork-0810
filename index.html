@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Prompt 智能寶庫</title>
+    <title>AI Prompt 指令庫｜策略顧問版</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome Icons -->
@@ -11,37 +11,115 @@
     <!-- PapaParse for parsing CSV from Google Sheets -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap');
+
+        :root {
+            --navy: #0E1A2B;
+            --navy-2: #16263D;
+            --gold: #A9823C;
+            --gold-light: #C9A75A;
+            --cream: #F6F3EC;
+            --paper: #FCFAF5;
+            --ink: #1B2430;
+            --slate: #667082;
+            --line: #E2DCC9;
+        }
+
         body {
             font-family: 'Inter', 'Noto Sans TC', sans-serif;
-            background-color: #f1f3f6;
-            color: #333333;
+            background-color: var(--cream);
+            color: var(--ink);
+        }
+
+        .font-display {
+            font-family: 'Cormorant Garamond', 'Noto Serif TC', serif;
+        }
+
+        .font-mono {
+            font-family: 'IBM Plex Mono', 'Noto Sans TC', monospace;
         }
 
         /* Custom scrollbar for prompt boxes */
         .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
+            width: 5px;
         }
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 4px;
+            background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #d1d5db;
+            background: var(--line);
             border-radius: 4px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #9ca3af;
+            background: var(--gold);
         }
 
-        /* Card purple top border highlight */
+        /* Masthead texture */
+        .masthead {
+            background:
+                radial-gradient(circle at 15% 20%, rgba(201,167,90,0.08), transparent 40%),
+                linear-gradient(180deg, var(--navy) 0%, var(--navy-2) 100%);
+        }
+
+        .eyebrow {
+            letter-spacing: 0.28em;
+        }
+
+        /* Card: dossier / case-file styling */
         .prompt-card {
-            border-top: 5px solid #9333ea;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-left: 3px solid var(--navy);
+            transition: transform 0.25s ease, box-shadow 0.25s ease, border-left-color 0.25s ease;
         }
         .prompt-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08);
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px -12px rgba(14, 26, 43, 0.18);
+            border-left-color: var(--gold);
+        }
+
+        .index-no {
+            font-variant-numeric: tabular-nums;
+            color: var(--gold);
+        }
+
+        /* Category pill */
+        .cat-pill {
+            letter-spacing: 0.06em;
+            border: 1px solid var(--line);
+        }
+        .cat-pill.active {
+            background: var(--navy);
+            color: var(--cream);
+            border-color: var(--navy);
+        }
+        .cat-pill:not(.active):hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+
+        /* Search field: understated underline, consulting-memo style */
+        .search-field {
+            background: var(--paper);
+            border: 1px solid var(--line);
+        }
+        .search-field:focus-within {
+            border-color: var(--gold);
+            box-shadow: 0 0 0 3px rgba(169,130,60,0.12);
+        }
+
+        .btn-primary {
+            background: var(--navy);
+            color: var(--cream);
+            transition: background 0.2s ease;
+        }
+        .btn-primary:hover {
+            background: var(--gold);
+            color: var(--navy);
+        }
+        .btn-primary.is-copied {
+            background: #3F5C4E;
+            color: #F1F5F1;
         }
 
         /* Toast animation */
@@ -54,51 +132,56 @@
         .toast-animate {
             animation: fadeInOut 2.5s forwards;
         }
+
+        .hairline {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, var(--gold), transparent);
+        }
     </style>
 </head>
 <body class="min-h-screen pb-16">
 
-    <!-- Header Section -->
-    <header class="pt-10 pb-6 px-4 text-center">
-        <h1 class="text-3xl sm:text-4xl font-bold flex items-center justify-center gap-2 text-gray-900 tracking-tight">
-            <span>🚀</span> AI Prompt 智能寶庫
+    <!-- Masthead -->
+    <header class="masthead pt-14 pb-10 px-4 text-center relative">
+        <p class="eyebrow font-mono text-[11px] text-[var(--gold-light)] uppercase mb-4">Confidential &middot; Internal Playbook</p>
+        <h1 class="font-display text-4xl sm:text-5xl font-semibold text-[var(--cream)] tracking-tight">
+            AI Prompt 指令庫
         </h1>
-        
-        <div class="mt-3 flex items-center justify-center gap-2">
-            <a href="https://docs.google.com/spreadsheets/d/1SwOSS42NqbFRmX8oXiv2SRhByj_0YCPjQY5HhKbeNAE/edit?usp=sharing" 
-               target="_blank" 
+        <p class="mt-3 text-sm text-white/50 font-medium tracking-wide">策略顧問版・提示詞資產管理</p>
+
+        <div class="mt-7 flex items-center justify-center gap-3">
+            <a href="https://docs.google.com/spreadsheets/d/1SwOSS42NqbFRmX8oXiv2SRhByj_0YCPjQY5HhKbeNAE/edit?usp=sharing"
+               target="_blank"
                rel="noopener noreferrer"
-               class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium transition shadow-sm">
-                <span>📁</span>
-                <span>開啟原始資料 Google Sheet</span>
-                <i class="fa-solid fa-arrow-up-right-from-square text-xs text-gray-400 ml-0.5"></i>
+               class="inline-flex items-center gap-2 px-4 py-2 border border-white/20 hover:border-[var(--gold)] text-white/80 hover:text-[var(--gold-light)] text-xs font-mono tracking-wide uppercase transition">
+                <span>原始資料檔</span>
+                <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i>
             </a>
-            <button id="refreshBtn" onclick="loadGoogleSheetData()" title="重新同步資料" 
-                    class="p-2 rounded-full border border-gray-300 bg-white hover:bg-gray-50 text-gray-600 text-sm transition shadow-sm">
+            <button id="refreshBtn" onclick="loadGoogleSheetData()" title="重新同步資料"
+                    class="w-9 h-9 flex items-center justify-center border border-white/20 hover:border-[var(--gold)] text-white/70 hover:text-[var(--gold-light)] text-sm transition">
                 <i class="fa-solid fa-rotate" id="refreshIcon"></i>
             </button>
         </div>
+        <div class="hairline w-40 mx-auto mt-10"></div>
     </header>
 
     <!-- Search & Filter Controls -->
-    <section class="max-w-6xl mx-auto px-4 sm:px-6">
+    <section class="max-w-6xl mx-auto px-4 sm:px-6 mt-10">
         <!-- Search Input -->
-        <div class="max-w-xl mx-auto mb-6 relative">
-            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </div>
-            <input type="text" 
-                   id="searchInput" 
-                   placeholder="搜尋提示詞..." 
+        <div class="max-w-xl mx-auto mb-8 relative search-field flex items-center px-4">
+            <i class="fa-solid fa-magnifying-glass text-[var(--slate)] text-sm"></i>
+            <input type="text"
+                   id="searchInput"
+                   placeholder="搜尋提示詞、分類或關鍵字…"
                    oninput="handleSearch()"
-                   class="w-full pl-11 pr-10 py-3 rounded-full border border-gray-200 bg-white text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm text-base transition">
-            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-0 pr-4 flex items-center text-gray-400 hover:text-gray-600">
+                   class="w-full bg-transparent border-none pl-3 pr-8 py-3 text-[var(--ink)] placeholder-[var(--slate)]/70 focus:outline-none text-sm">
+            <button id="clearSearchBtn" onclick="clearSearch()" class="hidden absolute inset-y-0 right-3 flex items-center text-[var(--slate)] hover:text-[var(--gold)]">
                 <i class="fa-solid fa-circle-xmark"></i>
             </button>
         </div>
 
         <!-- Category Tags Bar -->
-        <div id="categoryContainer" class="flex flex-wrap items-center justify-center gap-2.5 max-w-4xl mx-auto mb-8">
+        <div id="categoryContainer" class="flex flex-wrap items-center justify-center gap-2 max-w-4xl mx-auto mb-8">
             <!-- Category pills generated via JavaScript -->
         </div>
     </section>
@@ -106,37 +189,40 @@
     <!-- Main Content Container -->
     <main class="max-w-7xl mx-auto px-4 sm:px-6">
         <!-- Section Title & Meta -->
-        <div class="flex items-center justify-between mb-6 border-b border-gray-200/60 pb-3">
-            <h2 id="sectionTitle" class="text-xl sm:text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <span>🧠</span> <span id="categoryTitleText">AI 協思</span>
-            </h2>
-            <span id="promptCountBadge" class="text-xs font-semibold px-2.5 py-1 rounded-full bg-gray-200 text-gray-700">
+        <div class="flex items-end justify-between mb-7 border-b border-[var(--line)] pb-4">
+            <div>
+                <p class="font-mono text-[10px] tracking-[0.24em] text-[var(--gold)] uppercase mb-1">Category Dossier</p>
+                <h2 id="sectionTitle" class="font-display text-2xl sm:text-3xl font-semibold text-[var(--ink)]">
+                    <span id="categoryTitleText">AI 協思</span>
+                </h2>
+            </div>
+            <span id="promptCountBadge" class="font-mono text-[11px] tracking-wide px-3 py-1 border border-[var(--line)] text-[var(--slate)] whitespace-nowrap">
                 載入中...
             </span>
         </div>
 
         <!-- Loading State -->
         <div id="loadingSpinner" class="py-20 text-center">
-            <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent"></div>
-            <p class="mt-3 text-gray-500 text-sm font-medium">從 Google Sheet 載入資料中...</p>
+            <div class="inline-block animate-spin rounded-full h-9 w-9 border-2 border-[var(--gold)] border-t-transparent"></div>
+            <p class="mt-3 text-[var(--slate)] text-sm font-medium tracking-wide">資料同步中，請稍候…</p>
         </div>
 
         <!-- Empty Results -->
-        <div id="emptyState" class="hidden py-16 text-center bg-white rounded-2xl shadow-sm border border-gray-100 my-4">
-            <i class="fa-regular fa-folder-open text-5xl text-gray-300 mb-3"></i>
-            <p class="text-gray-600 font-medium">找不到符合條件的 Prompt</p>
-            <p class="text-gray-400 text-sm mt-1">請嘗試變更搜尋關鍵字或選擇其他分類</p>
+        <div id="emptyState" class="hidden py-16 text-center bg-[var(--paper)] border border-[var(--line)] my-4">
+            <i class="fa-regular fa-folder-open text-4xl text-[var(--line)] mb-3"></i>
+            <p class="text-[var(--ink)] font-medium">查無符合條件的提示詞</p>
+            <p class="text-[var(--slate)] text-sm mt-1">請調整搜尋關鍵字，或選擇其他分類</p>
         </div>
 
         <!-- Cards Grid Layout -->
-        <div id="promptGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div id="promptGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             <!-- Dynamic Prompt Cards Inserted Here -->
         </div>
     </main>
 
     <!-- Notification Toast -->
-    <div id="toast" class="fixed bottom-6 right-6 hidden z-50 bg-gray-900 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3">
-        <i class="fa-solid fa-circle-check text-green-400 text-lg"></i>
+    <div id="toast" class="fixed bottom-6 right-6 hidden z-50 bg-[var(--navy)] text-[var(--cream)] px-5 py-3 shadow-2xl flex items-center gap-3 border-l-2 border-[var(--gold)]">
+        <i class="fa-solid fa-circle-check text-[var(--gold-light)] text-lg"></i>
         <span id="toastMessage" class="text-sm font-medium">Prompt 已成功複製到剪貼簿！</span>
     </div>
 
@@ -190,8 +276,8 @@
 
         // Default Filter Categories (Matches screenshot)
         const defaultCategories = [
-            "全部", "內容創作", "筆記精煉", "程式應用", 
-            "簡報表達", "程式生成", "文本優化", "生文校正", 
+            "全部", "內容創作", "筆記精煉", "程式應用",
+            "簡報表達", "程式生成", "文本優化", "生文校正",
             "專案企劃", "圖片生成", "筆記整理", "資訊整理", "心智圖法"
         ];
 
@@ -209,7 +295,7 @@
         function loadGoogleSheetData() {
             const refreshIcon = document.getElementById('refreshIcon');
             const loadingSpinner = document.getElementById('loadingSpinner');
-            
+
             if (refreshIcon) refreshIcon.classList.add('fa-spin');
             if (loadingSpinner) loadingSpinner.classList.remove('hidden');
 
@@ -284,11 +370,10 @@
             categoriesList.forEach(cat => {
                 const isActive = cat === currentCategory;
                 const button = document.createElement('button');
-                
-                button.className = isActive 
-                    ? 'px-4 py-1.5 rounded-full text-sm font-medium transition shadow-sm bg-blue-600 text-white cursor-pointer'
-                    : 'px-4 py-1.5 rounded-full text-sm font-medium transition shadow-sm bg-white text-gray-700 hover:bg-gray-100 border border-gray-200 cursor-pointer';
-                
+
+                button.className = 'cat-pill px-4 py-1.5 text-xs font-mono uppercase transition cursor-pointer'
+                    + (isActive ? ' active' : ' bg-[var(--paper)] text-[var(--slate)]');
+
                 button.innerText = cat;
                 button.onclick = () => selectCategory(cat);
                 container.appendChild(button);
@@ -305,7 +390,7 @@
         function handleSearch() {
             const input = document.getElementById('searchInput');
             searchQuery = input.value.trim().toLowerCase();
-            
+
             const clearBtn = document.getElementById('clearSearchBtn');
             if (searchQuery.length > 0) {
                 clearBtn.classList.remove('hidden');
@@ -328,21 +413,21 @@
             const grid = document.getElementById('promptGrid');
             const emptyState = document.getElementById('emptyState');
             const countBadge = document.getElementById('promptCountBadge');
-            
+
             grid.innerHTML = '';
 
             // Filter logic
             const filtered = allPrompts.filter(item => {
                 const matchesCategory = currentCategory === '全部' || item.category === currentCategory;
-                const matchesSearch = !searchQuery || 
-                    item.title.toLowerCase().includes(searchQuery) || 
+                const matchesSearch = !searchQuery ||
+                    item.title.toLowerCase().includes(searchQuery) ||
                     item.content.toLowerCase().includes(searchQuery) ||
                     item.category.toLowerCase().includes(searchQuery);
 
                 return matchesCategory && matchesSearch;
             });
 
-            countBadge.innerText = `共 ${filtered.length} 個提示詞`;
+            countBadge.innerText = `共 ${filtered.length} 筆檔案`;
 
             if (filtered.length === 0) {
                 emptyState.classList.remove('hidden');
@@ -354,31 +439,34 @@
             // Generate Prompt Cards
             filtered.forEach((item, index) => {
                 const card = document.createElement('div');
-                card.className = 'prompt-card bg-white rounded-2xl p-5 flex flex-col justify-between shadow-sm border border-gray-100/80';
+                card.className = 'prompt-card p-5 flex flex-col justify-between';
+
+                const indexLabel = String(index + 1).padStart(2, '0');
 
                 card.innerHTML = `
                     <div>
-                        <!-- Category Tag -->
-                        <div class="mb-2">
-                            <span class="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-sky-50 text-sky-600 border border-sky-100">
+                        <!-- Index + Category -->
+                        <div class="flex items-center justify-between mb-3">
+                            <span class="font-mono text-xs index-no">No. ${indexLabel}</span>
+                            <span class="font-mono text-[10px] tracking-wide uppercase px-2.5 py-1 border border-[var(--line)] text-[var(--slate)]">
                                 ${escapeHtml(item.category || '通用')}
                             </span>
                         </div>
-                        
+
                         <!-- Title -->
-                        <h3 class="text-lg font-bold text-gray-900 mb-3 tracking-tight">
+                        <h3 class="font-display text-xl font-semibold text-[var(--ink)] mb-3 tracking-tight leading-snug">
                             ${escapeHtml(item.title)}
                         </h3>
 
                         <!-- Scrollable Text Box -->
-                        <div class="bg-gray-50 border border-gray-100 rounded-xl p-3.5 mb-4 h-48 overflow-y-auto custom-scrollbar">
-                            <pre class="whitespace-pre-wrap font-sans text-sm text-gray-600 leading-relaxed break-words">${escapeHtml(item.content)}</pre>
+                        <div class="bg-[var(--cream)] border border-[var(--line)] p-3.5 mb-4 h-48 overflow-y-auto custom-scrollbar">
+                            <pre class="whitespace-pre-wrap font-sans text-sm text-[var(--slate)] leading-relaxed break-words">${escapeHtml(item.content)}</pre>
                         </div>
                     </div>
 
                     <!-- Copy Action Button -->
-                    <button onclick="copyPrompt(this, \`${escapeJsString(item.content)}\`)" 
-                            class="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium text-sm rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-sm active:scale-95 cursor-pointer">
+                    <button onclick="copyPrompt(this, \`${escapeJsString(item.content)}\`)"
+                            class="btn-primary w-full py-2.5 px-4 font-medium text-sm tracking-wide flex items-center justify-center gap-2 transition duration-150 active:scale-95 cursor-pointer">
                         <i class="fa-regular fa-copy"></i>
                         <span>複製 Prompt</span>
                     </button>
@@ -396,7 +484,7 @@
             textarea.style.opacity = '0';
             document.body.appendChild(textarea);
             textarea.select();
-            
+
             let successful = false;
             try {
                 successful = document.execCommand('copy');
@@ -413,13 +501,11 @@
                 // Button UI Feedback
                 const originalText = buttonEl.innerHTML;
                 buttonEl.innerHTML = `<i class="fa-solid fa-check"></i> <span>已複製！</span>`;
-                buttonEl.classList.remove('bg-blue-600', 'hover:bg-blue-700');
-                buttonEl.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                buttonEl.classList.add('is-copied');
 
                 setTimeout(() => {
                     buttonEl.innerHTML = originalText;
-                    buttonEl.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
-                    buttonEl.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    buttonEl.classList.remove('is-copied');
                 }, 1800);
 
                 // Show Floating Toast
@@ -430,7 +516,7 @@
         function showToast(msg) {
             const toast = document.getElementById('toast');
             const toastMessage = document.getElementById('toastMessage');
-            
+
             toastMessage.innerText = msg;
             toast.classList.remove('hidden');
             toast.classList.add('toast-animate');
